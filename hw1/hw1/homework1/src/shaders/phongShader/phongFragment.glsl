@@ -109,7 +109,7 @@ float useShadowMap(sampler2D shadowMap, vec4 shadowCoord){
   vec4 deepValuePacked=texture2D(uShadowMap,shadowCoord.xy);
   float deepValue = unpack(deepValuePacked);
 
-  if (deepValue < length(uLightPos-vFragPos)) {
+  if (deepValue < shadowCoord.z) {
     return 0.0;
   } else {
     return 1.0;
@@ -145,7 +145,7 @@ void main(void) {
   
   vec3 shadowCoord;
 
-  vec4 x=(vPositionFromLight + vec4(1,1,0,0)) / 2.0;
+  vec4 x=(vPositionFromLight + vec4(1,1,1,0)) / 2.0;
   shadowCoord=x.xyz;
 
   visibility = useShadowMap(uShadowMap, vec4(shadowCoord, 1.0));
