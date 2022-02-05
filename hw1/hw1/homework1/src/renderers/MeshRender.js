@@ -121,7 +121,7 @@ class MeshRender {
 		camera.updateMatrixWorld();
 		//console.log(camera.matrixWorld)
 		mat4.invert(viewMatrix, camera.matrixWorld.elements);
-		// mat4.lookAt(viewMatrix, cameraPosition, [0,0,0], [0,1,0]);
+		//mat4.lookAt(viewMatrix, cameraPosition, [0,0,0], [0,1,0]);
 		
 		//mat4.lookAt(viewMatrix, [camera.position.x, camera.position.y, camera.position.z], [0,0,0], [0,1,0]);
 

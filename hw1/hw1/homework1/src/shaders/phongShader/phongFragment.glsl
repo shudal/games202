@@ -28,6 +28,7 @@ uniform sampler2D uShadowMap;
 
 varying vec4 vPositionFromLight;
 
+
 highp float rand_1to1(highp float x ) { 
   // -1 -1
   return fract(sin(x)*10000.0);
@@ -105,7 +106,14 @@ float PCSS(sampler2D shadowMap, vec4 coords){
 
 
 float useShadowMap(sampler2D shadowMap, vec4 shadowCoord){
-  return 1.0;
+  vec4 deepValuePacked=texture2D(uShadowMap,shadowCoord.xy);
+  float deepValue = unpack(deepValuePacked);
+
+  if (deepValue < length(uLightPos-vFragPos)) {
+    return 0.0;
+  } else {
+    return 1.0;
+  } 
 }
 
 vec3 blinnPhong() {
@@ -134,12 +142,21 @@ vec3 blinnPhong() {
 void main(void) {
 
   float visibility;
-  //visibility = useShadowMap(uShadowMap, vec4(shadowCoord, 1.0));
+  
+  vec3 shadowCoord;
+
+  vec4 x=(vPositionFromLight + vec4(1,1,0,0)) / 2.0;
+  shadowCoord=x.xyz;
+
+  visibility = useShadowMap(uShadowMap, vec4(shadowCoord, 1.0));
   //visibility = PCF(uShadowMap, vec4(shadowCoord, 1.0));
   //visibility = PCSS(uShadowMap, vec4(shadowCoord, 1.0));
 
+
+
+  //visibility=1.0;
   vec3 phongColor = blinnPhong();
 
-  //gl_FragColor = vec4(phongColor * visibility, 1.0);
-  gl_FragColor = vec4(phongColor, 1.0);
+  gl_FragColor = vec4(phongColor * visibility, 1.0);
+  //gl_FragColor = vec4(phongColor, 1.0);
 }
