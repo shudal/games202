@@ -131,7 +131,7 @@ float PCF(sampler2D shadowMap, vec4 coords) {
 }
 
 float PCSS(sampler2D shadowMap, vec4 coords){
-
+  float filterSize = 2.5/2048.0;
   // STEP 1: avgblocker depth
   uniformDiskSamples(coords.xy);
   float d_blocker = findBlocker(shadowMap,coords.xy,coords.z);
@@ -145,6 +145,13 @@ float PCSS(sampler2D shadowMap, vec4 coords){
     if (w_p < 1.0) {
       w_p = 1.0;
     }
+
+    filterSize = w_p * filterSize;
+
+    const float maxFilterSize = 50.0/2048.0;
+    if (filterSize > maxFilterSize) {
+      filterSize = maxFilterSize;
+    }
   } 
 
   // STEP 3: filtering
@@ -153,7 +160,7 @@ float PCSS(sampler2D shadowMap, vec4 coords){
   for (int i=0; i<PCF_NUM_SAMPLES; i++) {
     vec2 x=poissonDisk[i];
        
-    x = coords.xy + x * (w_p * 2.5/2048.0);
+    x = coords.xy + x * filterSize;
     vec4 deepValuePacked=texture2D(uShadowMap,x);
     float deepValue = unpack(deepValuePacked);
     if (deepValue > coords.z) {
