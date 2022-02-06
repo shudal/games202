@@ -89,7 +89,23 @@ float findBlocker( sampler2D shadowMap,  vec2 uv, float zReceiver ) {
 }
 
 float PCF(sampler2D shadowMap, vec4 coords) {
-  return 1.0;
+  poissonDiskSamples(coords.xy);
+
+  float finalVis=0.0;
+  for (int i=0; i<NUM_SAMPLES; i++) {
+    vec2 x=poissonDisk[i];
+    
+    //x = (x + vec2(1,1)) / 2.0;
+
+    x = coords.xy + x/1000.0;
+    vec4 deepValuePacked=texture2D(uShadowMap,x);
+    float deepValue = unpack(deepValuePacked);
+    if (deepValue > coords.z) {
+      finalVis++;
+    }
+  }
+  finalVis = finalVis / 20.0;
+  return finalVis;
 }
 
 float PCSS(sampler2D shadowMap, vec4 coords){
@@ -156,6 +172,8 @@ void main(void) {
 
   //visibility=1.0;
   vec3 phongColor = blinnPhong();
+
+  //phongColor=vec3(shadowCoord.z,0,0);
 
   gl_FragColor = vec4(phongColor * visibility, 1.0);
   //gl_FragColor = vec4(phongColor, 1.0);
