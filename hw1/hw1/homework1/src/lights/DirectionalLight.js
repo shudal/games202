@@ -60,7 +60,7 @@ class DirectionalLight {
 
         // 或
         // games101式M_ortho
-        MyOrtho(projectionMatrix,-100,100,-100,100,0,-400);
+        MyOrtho(projectionMatrix,-100,100,-80,80,0,-400);
         // 通过以下代码 将mvp变换后的坐标的z轴 取相反数，因为opengl gl比较深度值按照近小远大的原则。
         projectionMatrix[10]=-1*projectionMatrix[10];
         projectionMatrix[14]=-1*projectionMatrix[14];

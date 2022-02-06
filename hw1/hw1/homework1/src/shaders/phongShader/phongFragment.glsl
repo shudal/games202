@@ -85,40 +85,79 @@ void uniformDiskSamples( const in vec2 randomSeed ) {
 }
 
 float findBlocker( sampler2D shadowMap,  vec2 uv, float zReceiver ) {
-	return 1.0;
+
+  float deepAvg=-1.0;
+
+  float totalDeep=0.0;
+  int blockerCnt = 0;
+  for (int i=0; i<BLOCKER_SEARCH_NUM_SAMPLES; i++) {
+    vec2 x=poissonDisk[i]; 
+    x = uv + x * (10.0/2048.0);
+    vec4 deepValuePacked=texture2D(uShadowMap,x);
+    float deepValue = unpack(deepValuePacked);
+
+    if (deepValue < zReceiver) { 
+      totalDeep += deepValue;
+      blockerCnt++;
+    }
+  }
+  if (blockerCnt > 0) {
+    deepAvg = totalDeep / float(blockerCnt);
+  }
+	return deepAvg;
 }
 
 float PCF(sampler2D shadowMap, vec4 coords) {
-  poissonDiskSamples(coords.xy);
-
+  //poissonDiskSamples(coords.xy);
+  uniformDiskSamples(coords.xy);
+  
   float finalVis=0.0;
-  for (int i=0; i<NUM_SAMPLES; i++) {
+  for (int i=0; i<PCF_NUM_SAMPLES; i++) {
     vec2 x=poissonDisk[i];
     
     //x = (x + vec2(1,1)) / 2.0;
 
-    // 3x3附近的格子采样
+    // 5x5附近的格子采样
     // shadowmap采样的像素是2048x2048,因此1/2048是一个像素的长度。采样得到的数值范围是(-1,1)
-    x = coords.xy + x * (1.5/2048.0);
+    x = coords.xy + x * (2.5/2048.0);
     vec4 deepValuePacked=texture2D(uShadowMap,x);
     float deepValue = unpack(deepValuePacked);
     if (deepValue > coords.z) {
       finalVis++;
     }
   }
-  finalVis = finalVis / float(NUM_SAMPLES);
+  finalVis = finalVis / float(PCF_NUM_SAMPLES);
   return finalVis;
 }
 
 float PCSS(sampler2D shadowMap, vec4 coords){
 
   // STEP 1: avgblocker depth
-
+  uniformDiskSamples(coords.xy);
+  float d_blocker = findBlocker(shadowMap,coords.xy,coords.z);
+  const float w_light=20.0;
+  //gl_FragColor = vec4(d_blocker,0,0,1);
   // STEP 2: penumbra size
+  float w_p=1.0;
+  if (d_blocker > 0.0) {
+    w_p = w_light * (coords.z - d_blocker) / d_blocker;
+  } 
 
   // STEP 3: filtering
   
-  return 1.0;
+  float finalVis=0.0;
+  for (int i=0; i<PCF_NUM_SAMPLES; i++) {
+    vec2 x=poissonDisk[i];
+       
+    x = coords.xy + x * (w_p * 2.5/2048.0);
+    vec4 deepValuePacked=texture2D(uShadowMap,x);
+    float deepValue = unpack(deepValuePacked);
+    if (deepValue > coords.z) {
+      finalVis++;
+    }
+  }
+  finalVis = finalVis / float(PCF_NUM_SAMPLES);
+  return finalVis;
 
 }
 
@@ -167,8 +206,8 @@ void main(void) {
   shadowCoord=x.xyz;
 
   //visibility = useShadowMap(uShadowMap, vec4(shadowCoord, 1.0));
-  visibility = PCF(uShadowMap, vec4(shadowCoord, 1.0));
-  //visibility = PCSS(uShadowMap, vec4(shadowCoord, 1.0));
+  //visibility = PCF(uShadowMap, vec4(shadowCoord, 1.0));
+  visibility = PCSS(uShadowMap, vec4(shadowCoord, 1.0));
 
 
 
