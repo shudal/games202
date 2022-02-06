@@ -92,7 +92,7 @@ float findBlocker( sampler2D shadowMap,  vec2 uv, float zReceiver ) {
   int blockerCnt = 0;
   for (int i=0; i<BLOCKER_SEARCH_NUM_SAMPLES; i++) {
     vec2 x=poissonDisk[i]; 
-    x = uv + x * (10.0/2048.0);
+    x = uv + x * (50.0/2048.0);
     vec4 deepValuePacked=texture2D(uShadowMap,x);
     float deepValue = unpack(deepValuePacked);
 
@@ -141,6 +141,10 @@ float PCSS(sampler2D shadowMap, vec4 coords){
   float w_p=1.0;
   if (d_blocker > 0.0) {
     w_p = w_light * (coords.z - d_blocker) / d_blocker;
+
+    if (w_p < 1.0) {
+      w_p = 1.0;
+    }
   } 
 
   // STEP 3: filtering
