@@ -97,14 +97,16 @@ float PCF(sampler2D shadowMap, vec4 coords) {
     
     //x = (x + vec2(1,1)) / 2.0;
 
-    x = coords.xy + x/1000.0;
+    // 3x3附近的格子采样
+    // shadowmap采样的像素是2048x2048,因此1/2048是一个像素的长度。采样得到的数值范围是(-1,1)
+    x = coords.xy + x * (1.5/2048.0);
     vec4 deepValuePacked=texture2D(uShadowMap,x);
     float deepValue = unpack(deepValuePacked);
     if (deepValue > coords.z) {
       finalVis++;
     }
   }
-  finalVis = finalVis / 20.0;
+  finalVis = finalVis / float(NUM_SAMPLES);
   return finalVis;
 }
 
@@ -164,8 +166,8 @@ void main(void) {
   vec4 x=(vPositionFromLight + vec4(1,1,1,0)) / 2.0;
   shadowCoord=x.xyz;
 
-  visibility = useShadowMap(uShadowMap, vec4(shadowCoord, 1.0));
-  //visibility = PCF(uShadowMap, vec4(shadowCoord, 1.0));
+  //visibility = useShadowMap(uShadowMap, vec4(shadowCoord, 1.0));
+  visibility = PCF(uShadowMap, vec4(shadowCoord, 1.0));
   //visibility = PCSS(uShadowMap, vec4(shadowCoord, 1.0));
 
 
