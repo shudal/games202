@@ -135,7 +135,7 @@ float PCSS(sampler2D shadowMap, vec4 coords){
   // STEP 1: avgblocker depth
   uniformDiskSamples(coords.xy);
   float d_blocker = findBlocker(shadowMap,coords.xy,coords.z);
-  const float w_light=20.0;
+  const float w_light=30.0;
   //gl_FragColor = vec4(d_blocker,0,0,1);
   // STEP 2: penumbra size
   float w_p=1.0;
