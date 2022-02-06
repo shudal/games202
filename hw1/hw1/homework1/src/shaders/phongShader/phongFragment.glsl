@@ -16,8 +16,8 @@ varying highp vec3 vNormal;
 
 // Shadow map related variables
 #define NUM_SAMPLES 20
-#define BLOCKER_SEARCH_NUM_SAMPLES NUM_SAMPLES
-#define PCF_NUM_SAMPLES NUM_SAMPLES
+#define BLOCKER_SEARCH_NUM_SAMPLES 20
+#define PCF_NUM_SAMPLES 20
 #define NUM_RINGS 10
 
 #define EPS 1e-3
@@ -28,7 +28,7 @@ uniform sampler2D uShadowMap;
 
 varying vec4 vPositionFromLight;
 
-
+bool bEverSetColor=false;
 highp float rand_1to1(highp float x ) { 
   // -1 -1
   return fract(sin(x)*10000.0);
@@ -83,7 +83,28 @@ void uniformDiskSamples( const in vec2 randomSeed ) {
     radius = sqrt(sampleY);
   }
 }
+float PCF(sampler2D shadowMap, vec4 coords) {
+  poissonDiskSamples(coords.xy);
+  //uniformDiskSamples(coords.xy);
+  
+  float finalVis=0.0;
+  for (int i=0; i<PCF_NUM_SAMPLES; i++) {
+    vec2 x=poissonDisk[i];
+    
+    //x = (x + vec2(1,1)) / 2.0;
 
+    // 5x5附近的格子采样
+    // shadowmap采样的像素是2048x2048,因此1/2048是一个像素的长度。采样得到的数值范围是(-1,1)
+    x = coords.xy + x * (30.0*2.5/2048.0);
+    vec4 deepValuePacked=texture2D(uShadowMap,x);
+    float deepValue = unpack(deepValuePacked);
+    if (deepValue > coords.z) {
+      finalVis++;
+    }
+  }
+  finalVis = finalVis / float(PCF_NUM_SAMPLES);
+  return finalVis;
+}
 float findBlocker( sampler2D shadowMap,  vec2 uv, float zReceiver ) {
 
   float deepAvg=-1.0;
@@ -105,57 +126,65 @@ float findBlocker( sampler2D shadowMap,  vec2 uv, float zReceiver ) {
     deepAvg = totalDeep / float(blockerCnt);
   }
 	return deepAvg;
-}
-
-float PCF(sampler2D shadowMap, vec4 coords) {
-  //poissonDiskSamples(coords.xy);
-  uniformDiskSamples(coords.xy);
-  
-  float finalVis=0.0;
-  for (int i=0; i<PCF_NUM_SAMPLES; i++) {
-    vec2 x=poissonDisk[i];
-    
-    //x = (x + vec2(1,1)) / 2.0;
-
-    // 5x5附近的格子采样
-    // shadowmap采样的像素是2048x2048,因此1/2048是一个像素的长度。采样得到的数值范围是(-1,1)
-    x = coords.xy + x * (2.5/2048.0);
-    vec4 deepValuePacked=texture2D(uShadowMap,x);
-    float deepValue = unpack(deepValuePacked);
-    if (deepValue > coords.z) {
-      finalVis++;
-    }
-  }
-  finalVis = finalVis / float(PCF_NUM_SAMPLES);
-  return finalVis;
-}
+}  
 
 float PCSS(sampler2D shadowMap, vec4 coords){
-  float filterSize = 2.5/2048.0;
+  
+  highp float filterSize = 2.5/2048.0;
   // STEP 1: avgblocker depth
-  uniformDiskSamples(coords.xy);
+  poissonDiskSamples(coords.xy);
+  //DiskSamples(coords.xy);
   float d_blocker = findBlocker(shadowMap,coords.xy,coords.z);
   const float w_light=30.0;
   //gl_FragColor = vec4(d_blocker,0,0,1);
   // STEP 2: penumbra size
   float w_p=1.0;
   if (d_blocker > 0.0) {
-    w_p = w_light * (coords.z - d_blocker) / d_blocker;
+    w_p = (coords.z - d_blocker) / d_blocker;
+
+    //gl_FragColor=vec4(0,0,1,1);
+    //bEverSetColor=true;
+    if (w_p < 1.0) { 
+      
+      //gl_FragColor=vec4(1,0,0,1);
+      //bEverSetColor=true;
+    }
+
+    w_p *= w_light; 
+
+    //gl_FragColor=vec4(0,0,w_p/50.0,1);
+    //bEverSetColor=true;
 
     if (w_p < 1.0) {
       w_p = 1.0;
+      //gl_FragColor=vec4(1,0,0,1);
+      //bEverSetColor=true;
+    }
+
+    //w_p = 30.0;
+    //bEverSetColor=true;
+    if (w_p > 5.0) {
+      //gl_FragColor=vec4(1,0,0,1);
     }
 
     filterSize = w_p * filterSize;
 
     const float maxFilterSize = 50.0/2048.0;
     if (filterSize > maxFilterSize) {
-      filterSize = maxFilterSize;
+      //filterSize = maxFilterSize;
     }
-  } 
+
+    //gl_FragColor=vec4(0,0,1,1);
+    //bEverSetColor=true;
+  } else { 
+    //gl_FragColor=vec4(1,0,0,1);
+    //bEverSetColor=true;
+    //filterSize *= 10.0;
+  }
 
   // STEP 3: filtering
   
+  //filterSize = 30.0*2.5/2048.0;
   float finalVis=0.0;
   for (int i=0; i<PCF_NUM_SAMPLES; i++) {
     vec2 x=poissonDisk[i];
@@ -168,6 +197,8 @@ float PCSS(sampler2D shadowMap, vec4 coords){
     }
   }
   finalVis = finalVis / float(PCF_NUM_SAMPLES);
+
+  //return PCF(shadowMap,coords);
   return finalVis;
 
 }
@@ -227,6 +258,8 @@ void main(void) {
 
   //phongColor=vec3(shadowCoord.z,0,0);
 
-  gl_FragColor = vec4(phongColor * visibility, 1.0);
+  if (bEverSetColor==false) { 
+    gl_FragColor = vec4(phongColor * visibility, 1.0);
+  }
   //gl_FragColor = vec4(phongColor, 1.0);
 }
